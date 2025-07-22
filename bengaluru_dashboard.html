@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bengaluru Smart Assistance Dashboard</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .dashboard {
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            color: #4a5568;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-size: 1.1em;
+            color: #718096;
+            margin-bottom: 10px;
+        }
+
+        .phase-indicator {
+            display: inline-block;
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .time-display {
+            font-size: 1em;
+            color: #4a5568;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        /* Map Section */
+        .map-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .map-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .map-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .map-title h2 {
+            font-size: 1.5em;
+            color: #2d3748;
+        }
+
+        .location-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .emergency-btn {
+            background: linear-gradient(45deg, #f56565, #e53e3e);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 101, 101, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(245, 101, 101, 0); }
+        }
+
+        #map {
+            height: 450px;
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .card-icon {
+            width: 35px;
+            height: 35px;
+            margin-right: 12px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.3em;
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: auto;
+            animation: pulse 2s infinite;
+        }
+
+        .status-live { background: #48bb78; }
+        .status-warning { background: #ed8936; }
+        .status-critical { background: #f56565; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Assistance Request Panel */
+        .assistance-panel {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #48bb78;
+        }
+
+        .request-form {
+            display: grid;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.95em;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* Layer Controls */
+        .layer-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .layer-toggle {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .layer-toggle.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .layer-toggle:hover:not(.active) {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        /* Traffic, Events, Complaints Styles (Optimized) */
+        .traffic-route, .event-item, .complaint-item {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s ease;
+        }
+
+        .traffic-route:hover, .event-item:hover, .complaint-item:hover {
+            transform: translateX(3px);
+        }
+
+        .route-name, .event-title, .complaint-type {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 6px;
+            font-size: 0.95em;
+        }
+
+        .route-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+        }
+
+        .congestion-level {
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.75em;
+            font-weight: bold;
+            color: white;
+        }
+
+        .low { background: #48bb78; }
+        .medium { background: #ed8936; }
+        .high { background: #f56565; }
+
+        .event-details, .complaint-location {
+            color: #4a5568;
+            font-size: 0.8em;
+            line-height: 1.4;
+        }
+
+        .complaint-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .pending { background: #fed7d7; color: #c53030; }
+        .in-progress { background: #feebc8; color: #c05621; }
+        .resolved { background: #c6f6d5; color: #2f855a; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            color: #4a5568;
+            margin-top: 4px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            #map {
+                height: 350px;
+            }
+            
+            .map-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .location-controls {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            
+            .layer-controls {
+                justify-content: flex-start;
+            }
+        }
+
+        /* Custom Map Popup Styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .map-popup {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .popup-title {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .popup-details {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .popup-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .popup-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .popup-btn:hover {
+            background: #5a67d8;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <h1>🏙️ Bengaluru Smart Assistance Hub</h1>
+            <p class="subtitle">AI-Powered Assistive Technology • Real-time City Data • Community Support</p>
+            <div class="phase-indicator">✅ Phase 1: Interactive Map + Geolocation Active</div>
+            <div class="time-display" id="current-time"></div>
+        </header>
+
+        <!-- Interactive Map Section -->
+        <div class="map-section">
+            <div class="map-header">
+                <div class="map-title">
+                    <h2>🗺️ Interactive City Map</h2>
+                    <div class="status-indicator status-live"></div>
+                </div>
+                <div class="location-controls">
+                    <button class="control-btn" onclick="findMyLocation()">
+                        📍 Find My Location
+                    </button>
+                    <button class="control-btn" onclick="requestAssistance()">
+                        🤝 Request Help
+                    </button>
+                    <button class="control-btn emergency-btn" onclick="emergencyAlert()">
+                        🚨 Emergency
+                    </button>
+                </div>
+            </div>
+            
+            <div class="layer-controls">
+                <div class="layer-toggle active" data-layer="traffic" onclick="toggleLayer('traffic')">
+                    🚦 Traffic
+                </div>
+                <div class="layer-toggle active" data-layer="events" onclick="toggleLayer('events')">
+                    🎭 Events
+                </div>
+                <div class="layer-toggle active" data-layer="complaints" onclick="toggleLayer('complaints')">
+                    📋 Civic Issues
+                </div>
+                <div class="layer-toggle active" data-layer="assistance" onclick="toggleLayer('assistance')">
+                    🤝 Help Requests
+                </div>
+                <div class="layer-toggle" data-layer="companions" onclick="toggleLayer('companions')">
+                    👥 Available Companions
+                </div>
+            </div>
+            
+            <div id="map"></div>
+        </div>
+
+        <div class="grid">
+            <!-- Assistance Request Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🤝</div>
+                    <h2 class="card-title">Request Assistance</h2>
+                    <div class="status-indicator status-live"></div>
+                </div>
+                
+                <div class="assistance-panel">
+                    <form class="request-form" id="assistanceForm">
+                        <div class="form-group">
+                            <label class="form-label">What do you need help with?</label>
+                            <select class="form-select" id="helpType">
+                                <option value="">Select assistance type...</option>
+                                <option value="mobility">🦽 Mobility Assistance</option>
+                                <option value="navigation">🧭 Navigation Help</option>
+                                <option value="emergency">🚨 Emergency Support</option>
+                                <option value="errands">🛍️ Shopping/Errands</option>
+                                <option value="transport">🚌 Transportation</option>
+                                <option value="tech">💻 Technology Help</option>
+                                <option value="social">👥 Social Companion</option>
+                                <option value="other">🔄 Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-textarea" id="helpDescription" 
+                                placeholder="Describe what assistance you need..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">When do you need help?</label>
+                            <select class="form-select" id="urgency">
+                                <option value="now">🔥 Right now</option>
+                                <option value="today">📅 Later today</option>
+                                <option value="tomorrow">⏰ Tomorrow</option>
+                                <option value="scheduled">📋 Schedule for later</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="control-btn" style="width: 100%; justify-content: center;">
+                            📤 Submit Request
+                        </button>
+                    </form>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">23</div>
+                        <div class="stat-label">Active Helpers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">156</div>
+                        <div class="stat-label">Requests Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">2.4 min</div>
+                        <div class="stat-label">Avg Response</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Traffic Status -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🚦</div>
+                    <h2 class="card-title">Smart Route Planning</h2>
+                    <div class="status-indicator status-warning"></div>
+                </div>
+                
+                <div id="traffic-routes">
+                    <div class="traffic-route">
+                        <div class="route-name">🛣️ Outer Ring Road (ORR)</div>
+                        <div class="route-status">
+                            <span>Heavy congestion + Metro work</span>
+                            <span class="congestion-level high">AVOID</span>
+                        </div>
+                    </div>
+                    
+                    <div class="traffic-route">
+                        <div class="route-name">🏗️ Electronic City Flyover</div>
+                        <div class="route-status">
+                            <span>Moderate, +15min delay</span>
+                            <span class="congestion-level medium">CAUTION</span>
+                        </div>
+                    </div>
+                    
+                    <div class="traffic-route">
+                        <div class="route-name">🌉 Silk Board Junction</div>
+                        <div class="route-status">
+                            <span>Clear, optimal route</span>
+                            <span class="congestion-level low">OPTIMAL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="assistance-panel" style="margin-top: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #2d3748;">🚀 AI Route Suggestions</h4>
+                    <p style="font-size: 0.9em; color: #4a5568; line-height: 1.4;">
+                        Based on your location and current traffic, we recommend taking the 
+                        <strong>Silk Board - Hosur Road</strong> route. There's a companion available 
+                        who can assist with navigation in that area.
+                    </p>
+                </div>
+                
+                <button class="refresh-btn" onclick="refreshTraffic()">🔄 Update Routes</button>
+            </div>
+
+            <!-- Cultural Events with Context -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎭</div>
+                    <h2 class="card-title">Accessible Events</h2>
+                    <div class="status-indicator status-live"></div>
+                </div>
+                
+                <div id="events-list">
+                    <div class="event-item">
+                        <div class="event-title">🎵 Carnatic Music Festival</div>
+                        <div class="event-details">
+                            📅 Today, 7:00 PM • 📍 Chowdiah Memorial Hall<br>
+                            ♿ Wheelchair accessible • 🚗 Parking available<br>
+                            👥 2 companions available nearby
+                        </div>
+                    </div>
+                    
+                    <div class="event-item">
+                        <div class="event-title">🎨 Art Exhibition Opening</div>
+                        <div class="event-details">
+                            📅 Tomorrow, 6:00 PM • 📍 Chitrakala Parishath<br>
+                            ♿ Full accessibility • 🚌 Metro connected<br>
+                            📱 Audio guide available
+                        </div>
+                    </div>
+                    
+                    <div class="event-item">
+                        <div class="event-title">🌺 Community Garden Workshop</div>
+                        <div class="event-details">
+                            📅 This Weekend • 📍 Cubbon Park<br>
+                            🤝 Assistance available • ☀️ Outdoor venue<br>
+                            🎯 Inclusive activity design
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="refresh-btn" onclick="refreshEvents()">🔄 Find More Events</button>
+            </div>
+
+            <!-- Civic Intelligence -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🧠</div>
+                    <h2 class="card-title">City Intelligence</h2>
+                    <div class="status-indicator status-live"></div>
+                </div>
+                
+                <div id="complaints-list">
+                    <div class="complaint-item">
+                        <div class="complaint-type">♿ Accessibility Issue</div>
+                        <div class="complaint-location">📍 Koramangala Metro - Broken lift</div>
+                        <span class="complaint-status in-progress">FIXING</span>
+                    </div>
+                    
+                    <div class="complaint-item">
+                        <div class="complaint-type">🛣️ Road Maintenance</div>
+                        <div class="complaint-location">📍 Indiranagar - Large pothole</div>
+                        <span class="complaint-status pending">REPORTED</span>
+                    </div>
+                    
+                    <div class="complaint-item">
+                        <div class="complaint-type">💡 Street Light</div>
+                        <div class="complaint-location">📍 Whitefield - Safety concern</div>
+                        <span class="complaint-status resolved">FIXED</span>
+                    </div>
+                </div>
+
+                <div class="assistance-panel" style="margin-top: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #2d3748;">⚠️ Impact Alerts</h4>
+                    <p style="font-size: 0.9em; color: #4a5568; line-height: 1.4;">
+                        The broken lift at Koramangala Metro may affect your travel plans. 
+                        We've notified available companions in the area who can assist with alternative routes.
+                    </p>
+                </div>
+                
+                <button class="refresh-btn" onclick="refreshComplaints()">🔄 Update Issues</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    
+    <script>
+        // Global variables
+        let map;
+        let userLocation;
+        let activeLayers = {
+            traffic: true,
+            events: true,
+            complaints: true,
+            assistance: true,
+            companions: false
+        };
+        let mapMarkers = {
+            traffic: [],
+            events: [],
+            complaints: [],
+            assistance: [],
+            companions: []
+        };
+
+        // Initialize map
+        function initMap() {
+            // Center on Bengaluru
+            map = L.map('map').setView([12.9716, 77.5946], 12);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add sample data points
+            addSampleData();
+        }
+
+        // Add sample data to map
+        function addSampleData() {
+            // Traffic markers
+            const trafficData = [
+                {lat: 12.9351, lng: 77.6245, level: 'high', name: 'Outer Ring Road', description: 'Heavy congestion due to Metro construction'},
+                {lat: 12.8438, lng: 77.6632, level: 'medium', name: 'Electronic City', description: 'Moderate traffic, 15min delays'},
+                {lat: 12.9279, lng: 77.6271, level: 'low', name: 'Silk Board', description: 'Moving smoothly'},
+            ];
+
+            trafficData.forEach(point => {
+                const color = point.level === 'high' ? '#f56565' : point.level === 'medium' ? '#ed8936' : '#48bb78';
+                const marker = L.circleMarker([point.lat, point.lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: color,
+                    weight: 2,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                marker.bindPopup(`
+                    <div class="map-popup">
+                        <div class="popup-title">🚦 ${point.name}</div>
+                        <div class="popup-details">${point.description}</div>
+                        <div class="popup-actions">
+                            <button class="popup-btn" onclick="avoidRoute('${point.name}')">Avoid Route</button>
+                            <button class="popup-btn" onclick="requestRouteHelp('${point.name}')">Get Help</button>
+                        </div>
+                    </div>
+                `);
+                
+                mapMarkers.traffic.push(marker);
+            });
+
+            // Event markers
+            const eventData = [
+                {lat: 12.9698, lng: 77.5986, name: 'Chowdiah Memorial Hall', event: 'Carnatic Music Festival', accessible: true},
+                {lat: 12.9634, lng: 77.5855, name: 'Chitrakala Parishath', event: 'Art Exhibition', accessible: true},
+                {lat: 12.9723, lng: 77.5905, name: 'Cubbon Park', event: 'Garden Workshop', accessible: true}
+            ];
+
+            eventData.forEach(point => {
+                const marker = L.marker([point.lat, point.lng], {
+                    icon: L.divIcon({
+                        html: '🎭',
+                        className: 'custom-div-icon',
+                        iconSize: [20, 20]
+                    })
+                }).addTo(map);
+                
+                marker.bindPopup(`
+                    <div class="map-popup">
+                        <div class="popup-title">🎭 ${point.event}</div>
+                        <div class="popup-details">📍 ${point.name}<br>♿ ${point.accessible ? 'Fully accessible' : 'Limited access'}</div>
+                        <div class="popup-actions">
+                            <button class="popup-btn" onclick="planEventVisit('${point.name}')">Plan Visit</button>
+                            <button class="popup-btn" onclick="findEventCompanion('${point.name}')">Find Companion</button>
+                        </div>
+                    </div>
+                `);
+                
+                mapMarkers.events.push(marker);
+            });
+
+            // Civic complaint markers
+            const complaintData = [
+                {lat: 12.9279, lng: 77.6271, type: 'Accessibility', description: 'Broken lift at Metro station'},
+                {lat: 12.9719, lng: 77.6411, type: 'Road', description: 'Large pothole affecting mobility'},
+                {lat: 12.9698, lng: 77.7499, type: 'Lighting', description
